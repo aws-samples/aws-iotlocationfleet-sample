@@ -1,0 +1,128 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Location Geofence tracker EventBridge
+Parameters:
+  LocationGeofenceCollection:
+    Description: ARN of the Location geofence collection
+    Type: String
+  LocationTracker:
+    Description: ARN of the Location tracker
+    Type: String
+  IoTCertificate:
+    Description: ARN of the IoT certificate
+    Type: String
+  NotificationEmail:
+    Description: Email ID to send notification to
+    Type: String
+
+  
+Globals:
+  Function:
+    Timeout: 3
+
+Resources:
+  MyFleetIoT:
+    Type: AWS::IoT::Thing
+    Properties:
+      ThingName: myfleetiot
+      
+  MyIoTPolicy:
+    Type: AWS::IoT::Policy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - iot:Connect
+          - iot:Receive
+          - iot:Publish
+          - iot:Subscribe
+          Resource: '*'
+      PolicyName: myfleetiotpolicy
+      
+  MyPolicyCertAttachment:
+    Type: AWS::IoT::PolicyPrincipalAttachment
+    Properties:
+      PolicyName: !Ref MyIoTPolicy
+      Principal: !Ref IoTCertificate      
+      
+  MyThingCertAttachment:
+    Type: AWS::IoT::ThingPrincipalAttachment
+    Properties:
+      Principal: !Ref IoTCertificate
+      ThingName: !Ref MyFleetIoT
+
+  MyFleetLocationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      FifoTopic: false
+      Subscription:
+        - Endpoint: !Ref NotificationEmail
+          Protocol: "Email"
+      TopicName: "myfleetlocationtopic"            
+            
+  MyFleetEventRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Description: Test Events Rule
+      EventPattern: 
+        source: 
+          - "aws.geo"
+        account: [!Ref AWS::AccountId]
+        resources: [
+          !Ref LocationGeofenceCollection,
+          !Ref LocationTracker
+          ]
+        detail-type: 
+          - "Location Geofence Event"
+        detail: 
+          EventType: 
+            - "ENTER"
+            - "EXIT"
+          GeofenceId: 
+            - "mywarehouse"
+      Name: myfleeteventrule
+      State: ENABLED
+      Targets:
+        - 
+         Arn: !Ref MyFleetLocationTopic
+         Id: "idmyeventrule"
+         
+  MyFleetLocation:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: LambdaFunction/
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.8
+      FunctionName: myfleetlocation
+      Policies:
+       - Statement:
+         - Sid: WriteDevicePosition
+           Effect: Allow
+           Action:
+           - geo:BatchUpdateDevicePosition
+           Resource: 'arn:aws:geo:*:*:tracker/*'
+
+  MyTopicRule:
+    Type: AWS::IoT::TopicRule
+    Properties:
+      RuleName: topicrule
+      TopicRulePayload:
+        RuleDisabled: 'false'
+        Sql: SELECT * FROM 'iot/fleet/location'
+        Actions:
+        - Lambda:
+            FunctionArn: !GetAtt MyFleetLocation.Arn
+            
+  PermissionForIoTToInvokeLambda: 
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: 
+        Ref: "MyFleetLocation"
+      Action: "lambda:InvokeFunction"
+      Principal: "iot.amazonaws.com"
+      SourceArn: 
+        Fn::GetAtt: 
+          - "MyTopicRule"
+          - "Arn"            
