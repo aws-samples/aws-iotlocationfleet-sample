@@ -8,6 +8,7 @@ import json, subprocess, psutil
 import time, datetime
 import math
 
+#comment
 mode = 'enter' # change this to exit to publish location to exit geofence
 
 def getlocation(cnt):

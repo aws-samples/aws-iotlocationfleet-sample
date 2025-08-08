@@ -1,0 +1,40 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -78.69000,
+                            35.80280
+                        ],
+                        [
+                            -78.69000,
+                            35.80220
+                        ],
+                        [
+                            -78.68850,
+                            35.80220
+                        ],
+                        [
+                            -78.68850,
+                            35.80280
+                        ],
+                        [
+                            -78.69000,
+                            35.80280
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "geofenceId": "mywarehouse",
+                "name": "Warehouse Facility",
+                "description": "Main warehouse facility for fleet operations"
+            }
+        }
+    ]
+}

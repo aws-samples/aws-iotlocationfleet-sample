@@ -60,7 +60,22 @@ Resources:
       Subscription:
         - Endpoint: !Ref NotificationEmail
           Protocol: "Email"
-      TopicName: "myfleetlocationtopic"            
+      TopicName: "myfleetlocationtopic"
+      
+  MyFleetLocationTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref MyFleetLocationTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowEventBridgeToPublish
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: SNS:Publish
+            Resource: !Ref MyFleetLocationTopic            
             
   MyFleetEventRule:
     Type: 'AWS::Events::Rule'
@@ -80,8 +95,6 @@ Resources:
           EventType: 
             - "ENTER"
             - "EXIT"
-          GeofenceId: 
-            - "mywarehouse"
       Name: myfleeteventrule
       State: ENABLED
       Targets:
